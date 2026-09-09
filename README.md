@@ -4,7 +4,9 @@ HackMD の共同編集時に表示される編集者ごとの色を、より見�
 
 **[userscript をインストールする](https://raw.githubusercontent.com/riantkb/hackmd_author_colors/main/hackmd_author_colors.user.js)**
 
-![HackMD 上で編集者ごとの色を指定・表示している例](assets/screenshot.png)
+| 変更前 | userscript 適用後 |
+| :---: | :---: |
+| ![HackMD で編集者の色が近く、見分けにくい例](assets/before.png) | ![HackMD Author Colors で編集者ごとの色を指定・表示している例](assets/after.png) |
 
 HackMD では共同編集者ごとに色が自動で割り当てられますが、場合によっては非常に近い色が割り当てられ、誰が編集した箇所なのか判別しづらくなることがあります。
 
