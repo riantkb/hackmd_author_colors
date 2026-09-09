@@ -37,9 +37,11 @@
   const MAX_FRONT_MATTER_LINES = 500;
   const CONFIG_REFRESH_DELAY_MS = 100;
   const EDITOR_POLL_INTERVAL_MS = 500;
+  const MAX_EDITOR_POLL_ATTEMPTS = 120;
 
   let editor = null;
   let editorObserver = null;
+  let pageObserver = null;
   let observedEditorElement = null;
   let initializationTimer = null;
   let refreshTimer = null;
@@ -614,7 +616,7 @@
   }
 
   function observeEditorDom() {
-    const editorElement = document.querySelector(".CodeMirror");
+    const editorElement = editor?.getWrapperElement?.() || document.querySelector(".CodeMirror");
 
     if (!editorElement || editorElement === observedEditorElement) {
       return;
@@ -659,7 +661,9 @@
   }
 
   function findEditor() {
-    const candidate = window.editor || document.querySelector(".CodeMirror")?.CodeMirror;
+    const editorElement = document.querySelector(".CodeMirror");
+
+    const candidate = editorElement?.CodeMirror || window.editor;
 
     if (
       candidate &&
@@ -671,6 +675,26 @@
     }
 
     return null;
+  }
+
+  function resetEditor() {
+    clearTimeout(refreshTimer);
+
+    editorObserver?.disconnect();
+
+    if (editor && typeof editor.off === "function") {
+      editor.off("changes", scheduleConfigurationRefresh);
+    }
+
+    editor = null;
+    editorObserver = null;
+    observedEditorElement = null;
+    refreshTimer = null;
+    lastConfigSignature = null;
+
+    configuredColors = new Map();
+    automaticColors = new Map();
+    seenAuthors.clear();
   }
 
   function initializeEditor() {
@@ -689,17 +713,73 @@
     return Boolean(editor);
   }
 
-  initializationTimer = setInterval(() => {
-    const editorReady = initializeEditor();
-
-    if (editorReady && observedEditorElement) {
-      clearInterval(initializationTimer);
-
-      initializationTimer = null;
+  function stopInitializationPolling() {
+    if (initializationTimer === null) {
+      return;
     }
-  }, EDITOR_POLL_INTERVAL_MS);
 
-  initializeEditor();
+    clearInterval(initializationTimer);
+
+    initializationTimer = null;
+  }
+
+  function startInitializationPolling() {
+    if (initializationTimer !== null) {
+      return;
+    }
+
+    if (initializeEditor() && observedEditorElement) {
+      return;
+    }
+
+    let attempts = 0;
+
+    initializationTimer = setInterval(() => {
+      ++attempts;
+
+      const editorReady = initializeEditor();
+
+      if ((editorReady && observedEditorElement) || attempts >= MAX_EDITOR_POLL_ATTEMPTS) {
+        stopInitializationPolling();
+      }
+    }, EDITOR_POLL_INTERVAL_MS);
+  }
+
+  function observePageDom() {
+    if (!document.documentElement) {
+      return;
+    }
+
+    pageObserver = new MutationObserver((mutations) => {
+      if (observedEditorElement && !observedEditorElement.isConnected) {
+        resetEditor();
+      }
+
+      if (editor && observedEditorElement) {
+        return;
+      }
+
+      const editorWasAdded = mutations.some((mutation) =>
+        [...mutation.addedNodes].some(
+          (node) =>
+            node instanceof Element &&
+            (node.matches(".CodeMirror") || node.querySelector(".CodeMirror"))
+        )
+      );
+
+      if (editorWasAdded) {
+        startInitializationPolling();
+      }
+    });
+
+    pageObserver.observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+    });
+  }
+
+  observePageDom();
+  startInitializationPolling();
 
   /*
    * Debug helpers:

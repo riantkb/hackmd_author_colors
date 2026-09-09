@@ -28,7 +28,7 @@ Tampermonkey や Violentmonkey などの userscript manager をインストー�
 * [Tampermonkey](https://www.tampermonkey.net/)
 * [Violentmonkey](https://violentmonkey.github.io/)
 
-その後、このリポジトリの `hackmd_author_colors.user.js` をインストールしてください。
+その後、[userscript をインストール](https://raw.githubusercontent.com/riantkb/hackmd_author_colors/main/hackmd_author_colors.user.js)してください。
 
 インストール後、HackMD のページを開くか再読み込みすると有効になります。
 
